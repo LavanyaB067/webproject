@@ -1,12 +1,12 @@
-
 <?php
 $servername = "localhost";  // WAMP default server
 $username = "root";         // Default username for WAMP
 $password = "";             // No password by default
 $dbname = "service_minded"; // Your database name
+$port = "3309"; 
 
 // Create a connection to MySQL
-$conn = new mysqli($servername, $username, $password, $dbname);
+$conn = new mysqli($servername, $username, $password, $dbname,$port);
 
 // Check for connection errors
 if ($conn->connect_error) {
@@ -17,22 +17,24 @@ if ($conn->connect_error) {
 $successMessage = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Retrieve form data
-    $name = $_POST['name'];
-    $mobile = $_POST['mobile'];
-    $donation = $_POST['donation'];
-    $address = $_POST['address'];
-    $message = $_POST['message'];
+    // Retrieve and sanitize form data
+    $name = htmlspecialchars($_POST['name']);
+    $mobile = htmlspecialchars($_POST['mobile']);
+    $donation = htmlspecialchars($_POST['donation']);
+    $address = htmlspecialchars($_POST['address']);
+    $message = htmlspecialchars($_POST['message']);
 
-    // Insert data into the database
-    $sql = "INSERT INTO donations (name, mobile, donation, address, message) 
-            VALUES ('$name', '$mobile', '$donation', '$address', '$message')";
-
-    if ($conn->query($sql) === TRUE) {
+    // Use prepared statement to prevent SQL injection
+    $stmt = $conn->prepare("INSERT INTO donations (name, mobile, donation, address, message) VALUES (?, ?, ?, ?, ?)");
+    $stmt->bind_param("sssss", $name, $mobile, $donation, $address, $message);
+    
+    if ($stmt->execute()) {
         $successMessage = "Thank you! Your donation request has been received.";
     } else {
-        $successMessage = "Error: " . $sql . "<br>" . $conn->error;
+        $successMessage = "Error: " . $stmt->error;
     }
+    
+    $stmt->close();
 }
 
 // Close the connection
@@ -254,63 +256,38 @@ $conn->close();
     </section>
 
         <!-- Contact Section -->
-        <section class="contact-section" id="contact">
-            <div class="container">
-                <div class="heading">
-                    <h2>Connect With Us</h2>
-                    <p>Fill this form, our team will collect your <span>Donation</span> or <span>Wastage</span> from your place.</p>
+        <section id="contact">
+        <div class="container">
+            <h2>Connect With Us</h2>
+            <form method="POST" action="sm.php">
+                <div class="form-group">
+                    <input type="text" name="name" class="form-control" placeholder="Your Name" required>
                 </div>
-                <div class="row">
-                    <div class="col-lg-12 mt-5">
-                        <form class="contact-form">
-                            <div class="row">
-                                <div class="col-lg-12">
-                                    <div class="row">
-                                        <div class="col-lg-6">
-                                            <div class="col-lg-12">
-                                                <div class="form-group">
-                                                    <input type="text" class="form-control" placeholder="Your Name">
-                                                </div>
-                                            </div>
-                                            <div class="col-lg-12">
-                                                <div class="form-group">
-                                                    <input type="text" class="form-control" placeholder="Mobile No.">
-                                                </div>
-                                            </div>
-                                            <div class="col-lg-12">
-                                                <div class="form-group">
-                                                    <select name="donation" id="donation">
-                                                        <option value="">Choose Donation or Wastage</option>
-                                                        <option value="food">Food</option>
-                                                        <option value="clothes">Clothes</option>
-                                                        <option value="footware">Footware</option>
-                                                        <option value="books">Books</option>
-                                                        <option value="fund">Fund</option>
-                                                        <option value="gadget">Ele. Gadgets</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            
-                                        </div>
-                                        <div class="col-lg-6">
-                                            <div class="form-group">
-                                                <input type="text" class="form-control" placeholder="Address">
-                                            </div>
-                                            <div class="form-group">
-                                                <textarea class="form-control" name="text" id="" cols="90" rows="1" placeholder="Message"></textarea>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-12 mt-3">
-                                            <a href="#" class="btn1 mt-5">Submit Details</a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
+                <div class="form-group">
+                    <input type="text" name="mobile" class="form-control" placeholder="Mobile No." required>
                 </div>
-            </div>
-        </section>
+                <div class="form-group">
+                    <select name="donation" class="form-control" required>
+                        <option value="">Choose Donation Type</option>
+                        <option value="food">Food</option>
+                        <option value="clothes">Clothes</option>
+                        <option value="footwear">Footwear</option>
+                        <option value="books">Books</option>
+                        <option value="fund">Fund</option>
+                        <option value="gadget">Electronic Gadgets</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <input type="text" name="address" class="form-control" placeholder="Address" required>
+                </div>
+                <div class="form-group">
+                    <textarea name="message" class="form-control" placeholder="Message" rows="3"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Submit</button>
+            </form>
+            <p><?php echo $successMessage; ?></p>
+        </div>
+    </section>
 
     <footer>
         <div class="container">
